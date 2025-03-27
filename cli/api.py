@@ -88,27 +88,27 @@ def process_tts(task_id: str, audio_file_path: str, text: str, output_path: str)
 @app.post("/tts/create")
 async def create_tts_task(text: str, audio_file: UploadFile = File(...)):
     task_id = str(uuid.uuid4())
-    
+
     # 创建临时目录存储文件
     os.makedirs("temp", exist_ok=True)
     input_path = f"temp/{task_id}_input{os.path.splitext(audio_file.filename)[1]}"
     output_path = f"temp/{task_id}_output.wav"
-    
+
     # 保存上传的音频文件
     with open(input_path, "wb") as f:
         f.write(await audio_file.read())
-    
+
     # 创建任务
     tasks[task_id] = {
         "status": "processing",
         "input_path": input_path,
-        "output_path": output_path
+        "output_path": output_path,
     }
-    
+
     # 在后台执行TTS处理
     loop = asyncio.get_event_loop()
     loop.run_in_executor(executor, process_tts, task_id, input_path, text, output_path)
-    
+
     return {"task_id": task_id}
 
 
@@ -116,24 +116,26 @@ async def create_tts_task(text: str, audio_file: UploadFile = File(...)):
 async def get_task_status(task_id: str):
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     task = tasks[task_id]
-    return {
-        "status": task["status"],
-        "error": task.get("error")
-    }
+    return {"status": task["status"], "error": task.get("error")}
 
 
 @app.get("/tts/download/{task_id}")
 async def download_audio(task_id: str):
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     task = tasks[task_id]
     if task["status"] != "completed":
         raise HTTPException(status_code=400, detail="Task not completed")
-    
+
     return FileResponse(task["output_path"])
+
+
+@app.get("/tts/health")
+async def health():
+    return {"status": "ok"}
 
 
 def main():
