@@ -22,7 +22,7 @@ import requests
 
 
 api_servers = [
-    "http://localhost:8000",
+    "http://192.168.1.3:8000",
 ]
 
 
@@ -41,7 +41,7 @@ def call_tts_api(server_url: str, text: str, audio_path: str, save_path: str):
 
         # 尝试方法一：使用files和json
         files = {
-            "audio_file": (filename, open(audio_path, "rb"), "audio/mpeg"),
+            "audio_file": (filename, open(audio_path, "rb")),
         }
         body = {
             "text": text,
@@ -127,6 +127,10 @@ def main(dir_path: str):
             server_index = index % len(health_servers)
             server_url = health_servers[server_index]
             audio_path = os.path.join(dir_path, f"{audio_name}.mp3")
+            if not os.path.exists(audio_path):
+                audio_path = os.path.join(dir_path, f"{audio_name}.wav")
+            if not os.path.exists(audio_path):
+                raise Exception(f"Audio file {audio_path} does not exist")
             print(audio_path)
             print(text)
             save_path = os.path.join(dir_path, f"output_{index:03d}.wav")
