@@ -22,7 +22,7 @@ from typing import Dict
 
 import soundfile as sf
 import torch
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 import uvicorn
 from pydantic import BaseModel
@@ -80,13 +80,16 @@ def process_tts(task_id: str, audio_file_path: str, text: str, output_path: str)
         run_tts(text, audio_file_path, output_path)
         tasks[task_id]["status"] = "completed"
         tasks[task_id]["output_path"] = output_path
+        input_path = audio_file_path
+        if os.path.exists(input_path):
+            os.remove(input_path)
     except Exception as e:
         tasks[task_id]["status"] = "failed"
         tasks[task_id]["error"] = str(e)
 
 
 @app.post("/tts/create")
-async def create_tts_task(text: str, audio_file: UploadFile = File(...)):
+async def create_tts_task(text: str = Form(...), audio_file: UploadFile = File(...)):
     task_id = str(uuid.uuid4())
 
     # 创建临时目录存储文件

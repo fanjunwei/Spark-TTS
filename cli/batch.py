@@ -23,8 +23,6 @@ import requests
 
 api_servers = [
     "http://localhost:8000",
-    "http://192.168.1.100:8000",
-    "http://192.168.1.101:8000",
 ]
 
 
@@ -39,14 +37,20 @@ def call_tts_api(server_url: str, text: str, audio_path: str, save_path: str):
     """
     try:
         # 1. 创建任务
+        filename = os.path.basename(audio_path)
+
+        # 尝试方法一：使用files和json
         files = {
-            "audio_file": ("audio.wav", open(audio_path, "rb")),
+            "audio_file": (filename, open(audio_path, "rb"), "audio/mpeg"),
         }
         body = {
             "text": text,
         }
-        response = requests.post(f"{server_url}/tts/create", files=files, json=body)
+        response = requests.post(
+            f"{server_url}/tts/create", files=files, data=body
+        )
         response.raise_for_status()
+
         task_id = response.json()["task_id"]
         logging.info(f"Created task {task_id}")
 
