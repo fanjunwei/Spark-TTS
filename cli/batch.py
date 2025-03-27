@@ -26,35 +26,42 @@ api_servers = [
 ]
 
 
-def call_tts_api(server_url: str, text: str, audio_path: str, save_path: str):
+def call_create_tts_api(server_url: str, text: str, audio_path: str):
     """调用TTS API服务并等待结果
 
     Args:
         server_url: API服务器地址
         text: 要转换的文本
         audio_path: 输入音频文件路径
+    """
+    # 1. 创建任务
+    filename = os.path.basename(audio_path)
+
+    # 尝试方法一：使用files和json
+    files = {
+        "audio_file": (filename, open(audio_path, "rb")),
+    }
+    body = {
+        "text": text,
+    }
+    response = requests.post(f"{server_url}/tts/create", files=files, data=body)
+    response.raise_for_status()
+
+    task_id = response.json()["task_id"]
+    logging.info(f"Created task {task_id}")
+    return task_id
+
+
+def call_get_result_api(server_url: str, task_id: str, save_path: str):
+    """调用TTS API服务并等待结果
+
+    Args:
+        server_url: API服务器地址
+        task_id: 任务ID
         save_path: 输出音频保存路径
     """
     try:
-        # 1. 创建任务
-        filename = os.path.basename(audio_path)
-
-        # 尝试方法一：使用files和json
-        files = {
-            "audio_file": (filename, open(audio_path, "rb")),
-        }
-        body = {
-            "text": text,
-        }
-        response = requests.post(
-            f"{server_url}/tts/create", files=files, data=body
-        )
-        response.raise_for_status()
-
-        task_id = response.json()["task_id"]
-        logging.info(f"Created task {task_id}")
-
-        # 2. 轮询任务状态
+        # 1. 轮询任务状态
         error_count = 0
         while True:
             response = requests.get(f"{server_url}/tts/status/{task_id}")
@@ -70,11 +77,10 @@ def call_tts_api(server_url: str, text: str, audio_path: str, save_path: str):
                 break
             elif status["status"] == "failed":
                 raise Exception(f"Task failed: {status.get('error')}")
+            elif status["status"] == "processing":
+                return False
 
-            logging.info(f"Task {task_id} is still processing, waiting...")
-            time.sleep(5)  # 等待5秒后再次查询
-
-        # 3. 下载生成的音频文件
+        # 2. 下载生成的音频文件
         logging.info(f"Downloading result for task {task_id}")
         error_count = 0
         while True:
@@ -98,6 +104,7 @@ def call_tts_api(server_url: str, text: str, audio_path: str, save_path: str):
     except Exception as e:
         logging.error(f"Error during API call: {str(e)}")
         raise
+    return True
 
 
 def main(dir_path: str):
@@ -118,6 +125,7 @@ def main(dir_path: str):
 
     files = os.listdir(dir_path)
     files.sort()
+    tasks = {}
     for file in files:
         if file.endswith(".txt"):
             with open(os.path.join(dir_path, file), "r") as f:
@@ -140,7 +148,13 @@ def main(dir_path: str):
             try:
                 for i in range(3):
                     try:
-                        call_tts_api(server_url, text, audio_path, save_path)
+                        task_id = call_create_tts_api(server_url, text, audio_path)
+                        tasks[task_id] = {
+                            "save_path": save_path,
+                            "status": "processing",
+                            "server_url": server_url,
+                        }
+
                         break
                     except Exception as e:
                         logging.error(f"Error calling TTS API: {str(e)}")
@@ -148,6 +162,11 @@ def main(dir_path: str):
             except Exception as e:
                 logging.error(f"Error calling TTS API: {str(e)}")
                 continue
+        for task_id, task_info in tasks.items():
+            if task_info["status"] == "processing":
+                server_url = task_info["server_url"]
+                if call_get_result_api(server_url, task_id, task_info["save_path"]):
+                    task_info["status"] = "completed"
 
 
 if __name__ == "__main__":

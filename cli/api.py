@@ -65,7 +65,7 @@ def run_tts(text: str, audio_path: str, save_path: str):
 
 # 存储任务状态和结果
 tasks: Dict[str, Dict] = {}
-executor = ThreadPoolExecutor(max_workers=2)
+executor = ThreadPoolExecutor(max_workers=1)
 
 
 class TextRequest(BaseModel):
