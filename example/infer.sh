@@ -26,7 +26,7 @@ root_dir=$(dirname "$script_dir")
 device=0
 save_dir='example/results'
 model_dir="pretrained_models/Spark-TTS-0.5B"
-text="身临其境，换新体验。塑造开源语音合成新范式，让智能语音更自然。"
+text="《柳林风声》是一部童话，书中塑造了几个可爱的动物形象：胆小怕事、生性喜欢冒险的鼹鼠，热情好客、充满浪漫情趣的河鼠，侠义十足、具有领袖风范的狗獾，喜欢吹牛、追求时髦的蟾蜍，敦厚老实的水獭。小说生动地刻画了柳林中萦绕的友谊与温情。"
 prompt_text="吃燕窝就选燕之屋，本节目由26年专注高品质燕窝的燕之屋冠名播出。豆奶牛奶换着喝，营养更均衡，本节目由豆本豆豆奶特约播出。"
 prompt_speech_path="example/prompt_audio.wav"
 
